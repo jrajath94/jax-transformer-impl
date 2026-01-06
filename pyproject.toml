@@ -1,0 +1,122 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.backends.legacy:build"
+
+[project]
+name = "jax-transformer"
+version = "0.1.0"
+description = "Production-grade JAX implementation of Grouped Query Attention (GQA) with JIT, vmap, and pmap support"
+readme = "README.md"
+license = { text = "MIT" }
+authors = [{ name = "Rajath John", email = "jrajath94@gmail.com" }]
+keywords = [
+    "jax",
+    "transformer",
+    "attention",
+    "grouped-query-attention",
+    "gqa",
+    "llm",
+    "deep-learning",
+    "xla",
+    "tpu",
+]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+]
+requires-python = ">=3.10"
+dependencies = [
+    "jax>=0.4.20",
+    "jaxlib>=0.4.20",
+    "numpy>=1.24",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.4",
+    "pytest-cov>=4.1",
+    "ruff>=0.1.0",
+    "mypy>=1.7",
+]
+bench = [
+    "torch>=2.1",       # Optional PyTorch baseline in benchmarks
+]
+
+[project.scripts]
+jax-transformer = "jax_transformer.cli:main"
+
+[project.urls]
+Homepage = "https://github.com/jrajath94/jax-transformer-impl"
+Repository = "https://github.com/jrajath94/jax-transformer-impl"
+Issues = "https://github.com/jrajath94/jax-transformer-impl/issues"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+# ---------------------------------------------------------------------------
+# Ruff
+# ---------------------------------------------------------------------------
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+src = ["src"]
+
+[tool.ruff.lint]
+select = [
+    "E",    # pycodestyle errors
+    "F",    # pyflakes
+    "I",    # isort
+    "B",    # flake8-bugbear
+    "UP",   # pyupgrade
+    "N",    # pep8-naming
+    "ANN",  # flake8-annotations (type hints)
+    "D",    # pydocstyle (docstrings)
+]
+ignore = [
+    "D100", # missing docstring in public module (handled by __init__)
+    "D107", # missing docstring in __init__
+    "ANN101", # self type hints not required
+    "ANN102", # cls type hints not required
+]
+
+[tool.ruff.lint.pydocstyle]
+convention = "google"
+
+[tool.ruff.lint.isort]
+known-third-party = ["jax", "jaxlib", "numpy", "flax"]
+
+# ---------------------------------------------------------------------------
+# Mypy
+# ---------------------------------------------------------------------------
+[tool.mypy]
+python_version = "3.10"
+strict = false
+ignore_missing_imports = true
+warn_return_any = true
+warn_unused_configs = true
+exclude = ["tests/", "benchmarks/", "examples/"]
+
+# ---------------------------------------------------------------------------
+# Pytest
+# ---------------------------------------------------------------------------
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "--tb=short -v --cov=src --cov-report=term-missing"
+filterwarnings = [
+    "ignore::DeprecationWarning",
+    "ignore::UserWarning:jax",
+]
+
+[tool.coverage.run]
+source = ["src"]
+omit = ["*/cli.py"]  # CLI is exercised manually, not in unit tests
+
+[tool.coverage.report]
+fail_under = 80
+show_missing = true
