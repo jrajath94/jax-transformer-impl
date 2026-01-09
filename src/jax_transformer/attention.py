@@ -1,7 +1,7 @@
-"""Multi-head attention in JAX.
+"""Multi-head and multi-query attention in JAX.
 
-Implements standard multi-head attention (Vaswani et al., 2017).
-MQA and GQA variants are planned for next iteration.
+Implements MHA (Vaswani et al., 2017) and MQA (Shazeer, 2019).
+GQA variant coming next.
 
 All functions are functional (no side effects) and JIT-compilable.
 Shapes follow the convention [batch, seq_len, num_heads, head_dim].
@@ -29,16 +29,13 @@ def scaled_dot_product_attention(
 ) -> jnp.ndarray:
     """Scaled dot-product attention (Vaswani et al., 2017).
 
-    Computes softmax((Q @ K^T) / sqrt(d_k)) @ V. The scaling by 1/sqrt(d_k)
-    keeps dot-product magnitudes stable regardless of head dimension.
-
     Args:
-        query: Query tensor of shape [batch, seq_len, num_heads, head_dim].
-        key: Key tensor of shape [batch, kv_seq_len, num_heads, head_dim].
-        value: Value tensor of shape [batch, kv_seq_len, num_heads, head_dim].
-        mask: Optional boolean mask. True means attend, False means mask.
-        dropout_rate: Attention weight dropout probability.
-        dropout_rng: JAX PRNG key required when dropout_rate > 0.
+        query: Shape [batch, seq_len, num_heads, head_dim].
+        key: Shape [batch, kv_seq_len, num_heads, head_dim].
+        value: Shape [batch, kv_seq_len, num_heads, head_dim].
+        mask: Optional boolean mask. True = attend.
+        dropout_rate: Attention dropout probability.
+        dropout_rng: PRNG key for dropout.
 
     Returns:
         Context tensor of shape [batch, seq_len, num_heads, head_dim].
@@ -82,9 +79,6 @@ def multi_head_attention(
 ) -> jnp.ndarray:
     """Standard multi-head attention (MHA).
 
-    Each query head attends over its own dedicated key/value head.
-    This is the most memory-intensive variant.
-
     Args:
         query: Shape [batch, seq_len, num_heads, head_dim].
         key: Shape [batch, kv_seq_len, num_heads, head_dim].
@@ -101,3 +95,31 @@ def multi_head_attention(
         query, key, value, mask=mask,
         dropout_rate=dropout_rate, dropout_rng=dropout_rng,
     )
+
+
+def multi_query_attention(
+    query: jnp.ndarray,
+    key: jnp.ndarray,
+    value: jnp.ndarray,
+    mask: Optional[jnp.ndarray] = None,
+) -> jnp.ndarray:
+    """Multi-query attention (MQA) — Shazeer (2019).
+
+    A single KV head is shared across all query heads. MQA is the
+    extreme case of GQA where num_kv_heads == 1.
+
+    Args:
+        query: Shape [batch, seq_len, num_heads, head_dim].
+        key: Shape [batch, kv_seq_len, 1, head_dim].
+        value: Shape [batch, kv_seq_len, 1, head_dim].
+        mask: Optional attention mask.
+
+    Returns:
+        Context tensor of shape [batch, seq_len, num_heads, head_dim].
+    """
+    num_heads: int = query.shape[2]
+    logger.debug("MQA: q=%s k=%s, broadcasting 1 KV head to %d Q heads",
+                 query.shape, key.shape, num_heads)
+    key_expanded = jnp.repeat(key, num_heads, axis=2)
+    value_expanded = jnp.repeat(value, num_heads, axis=2)
+    return scaled_dot_product_attention(query, key_expanded, value_expanded, mask=mask)
