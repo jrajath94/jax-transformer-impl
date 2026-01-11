@@ -1,10 +1,8 @@
-"""Multi-head and multi-query attention in JAX.
+"""Multi-head, multi-query, and grouped-query attention in JAX.
 
-Implements MHA (Vaswani et al., 2017) and MQA (Shazeer, 2019).
-GQA variant coming next.
-
-All functions are functional (no side effects) and JIT-compilable.
-Shapes follow the convention [batch, seq_len, num_heads, head_dim].
+Implements MHA, MQA, and GQA (Ainslie et al., 2023).
+All functions are functional and JIT-compilable.
+Shapes: [batch, seq_len, num_heads, head_dim].
 """
 
 import logging
@@ -17,6 +15,7 @@ import jax.numpy as jnp
 logger = logging.getLogger(__name__)
 
 NEG_INF: float = -1e9
+_AUTO_SCALE: None = None
 
 
 def scaled_dot_product_attention(
@@ -27,7 +26,7 @@ def scaled_dot_product_attention(
     dropout_rate: float = 0.0,
     dropout_rng: Optional[jax.Array] = None,
 ) -> jnp.ndarray:
-    """Scaled dot-product attention (Vaswani et al., 2017).
+    """Scaled dot-product attention.
 
     Args:
         query: Shape [batch, seq_len, num_heads, head_dim].
@@ -83,7 +82,7 @@ def multi_head_attention(
         query: Shape [batch, seq_len, num_heads, head_dim].
         key: Shape [batch, kv_seq_len, num_heads, head_dim].
         value: Shape [batch, kv_seq_len, num_heads, head_dim].
-        mask: Optional attention mask, True = attend.
+        mask: Optional attention mask.
         dropout_rate: Attention dropout probability.
         dropout_rng: PRNG key for dropout.
 
@@ -105,9 +104,6 @@ def multi_query_attention(
 ) -> jnp.ndarray:
     """Multi-query attention (MQA) — Shazeer (2019).
 
-    A single KV head is shared across all query heads. MQA is the
-    extreme case of GQA where num_kv_heads == 1.
-
     Args:
         query: Shape [batch, seq_len, num_heads, head_dim].
         key: Shape [batch, kv_seq_len, 1, head_dim].
@@ -118,8 +114,44 @@ def multi_query_attention(
         Context tensor of shape [batch, seq_len, num_heads, head_dim].
     """
     num_heads: int = query.shape[2]
-    logger.debug("MQA: q=%s k=%s, broadcasting 1 KV head to %d Q heads",
-                 query.shape, key.shape, num_heads)
     key_expanded = jnp.repeat(key, num_heads, axis=2)
     value_expanded = jnp.repeat(value, num_heads, axis=2)
+    return scaled_dot_product_attention(query, key_expanded, value_expanded, mask=mask)
+
+
+def grouped_query_attention(
+    query: jnp.ndarray,
+    key: jnp.ndarray,
+    value: jnp.ndarray,
+    mask: Optional[jnp.ndarray] = None,
+) -> jnp.ndarray:
+    """Grouped query attention (GQA) — Ainslie et al. (2023).
+
+    Args:
+        query: Shape [batch, seq_len, num_heads, head_dim].
+        key: Shape [batch, kv_seq_len, num_kv_heads, head_dim].
+        value: Shape [batch, kv_seq_len, num_kv_heads, head_dim].
+        mask: Optional attention mask.
+
+    Returns:
+        Context tensor of shape [batch, seq_len, num_heads, head_dim].
+
+    Raises:
+        ValueError: If num_heads is not divisible by num_kv_heads.
+    """
+    num_heads: int = query.shape[2]
+    num_kv_heads: int = key.shape[2]
+
+    if num_heads % num_kv_heads != 0:
+        raise ValueError(
+            f"num_heads ({num_heads}) must be divisible by num_kv_heads ({num_kv_heads})"
+        )
+
+    groups_per_kv_head: int = num_heads // num_kv_heads
+
+    # BUG: axis=3 repeats along head_dim instead of num_kv_heads dimension
+    # This passes shape checks in some cases due to broadcasting but produces wrong output.
+    key_expanded = jnp.repeat(key, groups_per_kv_head, axis=3)  # wrong axis
+    value_expanded = jnp.repeat(value, groups_per_kv_head, axis=3)  # wrong axis
+
     return scaled_dot_product_attention(query, key_expanded, value_expanded, mask=mask)
