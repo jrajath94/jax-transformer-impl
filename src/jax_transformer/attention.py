@@ -149,9 +149,9 @@ def grouped_query_attention(
 
     groups_per_kv_head: int = num_heads // num_kv_heads
 
-    # BUG: axis=3 repeats along head_dim instead of num_kv_heads dimension
-    # This passes shape checks in some cases due to broadcasting but produces wrong output.
-    key_expanded = jnp.repeat(key, groups_per_kv_head, axis=3)  # wrong axis
-    value_expanded = jnp.repeat(value, groups_per_kv_head, axis=3)  # wrong axis
+    # axis=2 is the num_kv_heads dimension: [batch, seq_len, num_kv_heads, head_dim]
+    # Repeat along axis=2 so KV head i covers query heads [i*G .. i*G + G-1].
+    key_expanded = jnp.repeat(key, groups_per_kv_head, axis=2)
+    value_expanded = jnp.repeat(value, groups_per_kv_head, axis=2)
 
     return scaled_dot_product_attention(query, key_expanded, value_expanded, mask=mask)
