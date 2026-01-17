@@ -9,6 +9,12 @@ Follows the architecture pattern in Llama 2 / Gemma:
 The module is implemented as a pure functional JAX module with explicit
 parameter trees, making it straightforward to use with optax optimizers
 and compatible with pmap for multi-device training.
+
+Note on JIT compilation: GQAConfig is a frozen dataclass, which means
+it is hashable and can be passed as a static argument to jax.jit. If you
+need to jit transformer_block_forward with config as a captured closure,
+use functools.partial or wrap in a lambda. Passing config as a traced
+(non-static) argument will cause recompilation on every distinct config.
 """
 
 import logging
