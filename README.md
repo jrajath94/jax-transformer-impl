@@ -80,22 +80,24 @@ INFO    PASSED: GQA is a strict generalization of MHA
 
 ## Benchmarks
 
-Measured on CPU backend (JAX 0.4.23, Python 3.11), batch=4, seq=512, head_dim=64, 32 transformer layers for KV cache estimate.
+Measured on CPU backend (JAX 0.9.0, Python 3.11), batch=4, seq=512, head_dim=64, 32 transformer layers for KV cache estimate.
 
 | Config | Latency (ms) | KV Cache (MB) | KV Reduction vs MHA |
 |--------|-------------|---------------|---------------------|
-| MHA (H=8, G=8) | 1.82 | 50.33 | 1.0x |
-| GQA (H=8, G=4) | 1.41 | 12.58 | 4.0x |
-| GQA (H=8, G=2) | 1.23 | 6.29 | 8.0x |
-| MQA (H=8, G=1) | 1.18 | 3.15 | 16.0x |
+| MHA (H=8, G=8) | 20.84 | 268.44 | 1.0x |
+| GQA (H=8, G=4) | 19.96 | 134.22 | 2.0x |
+| GQA (H=8, G=2) | 18.26 | 67.11 | 4.0x |
+| MQA (H=8, G=1) | 20.90 | 33.55 | 8.0x |
+
+*Note: latency advantage of GQA is more pronounced on GPU/TPU where KV loading from HBM is the bottleneck. On CPU, compute dominates over bandwidth.*
 
 **Production-scale KV cache** (Llama-2-70B config: bs=32, seq=4096, 80 layers):
 
 | Config | KV Cache |
 |--------|----------|
-| MHA (H=64) | 536.87 GB |
-| GQA like Llama-2-70B (G=8) | 67.11 GB |
-| MQA (G=1) | 8.39 GB |
+| MHA (H=64) | 687.19 GB |
+| GQA like Llama-2-70B (G=8) | 85.90 GB |
+| MQA (G=1) | 10.74 GB |
 
 *This is why Llama-2-70B uses GQA with G=8 — it makes 4K-context inference feasible on 8× A100 80GB.*
 

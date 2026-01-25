@@ -33,16 +33,26 @@ class TestScaledDotProductAttention:
         """With a causal mask, each position should only attend to past positions.
 
         We verify this by checking that the output at position 0 is identical
-        regardless of what tokens appear at positions 1+. If masking is broken,
-        those future tokens would contaminate position 0.
+        when we swap out the K/V at positions 1+ (the future). Position 0 only
+        attends to itself (the causal mask blocks future tokens), so changing
+        future K/V should not change position-0 output. We keep K/V at position 0
+        identical between the two runs so only the masked-out future differs.
         """
         batch, seq_len, num_heads, head_dim = 1, 4, 2, 8
         keys = jax.random.split(rng, 6)
         query = jax.random.normal(keys[0], (batch, seq_len, num_heads, head_dim))
-        key_a = jax.random.normal(keys[1], (batch, seq_len, num_heads, head_dim))
-        key_b = jax.random.normal(keys[2], (batch, seq_len, num_heads, head_dim))
-        value_a = jax.random.normal(keys[3], (batch, seq_len, num_heads, head_dim))
-        value_b = jax.random.normal(keys[4], (batch, seq_len, num_heads, head_dim))
+
+        # Shared K/V at position 0, different random K/V at positions 1+
+        shared_kv0 = jax.random.normal(keys[1], (batch, 1, num_heads, head_dim))
+        future_k_a = jax.random.normal(keys[2], (batch, seq_len - 1, num_heads, head_dim))
+        future_k_b = jax.random.normal(keys[3], (batch, seq_len - 1, num_heads, head_dim))
+        future_v_a = jax.random.normal(keys[4], (batch, seq_len - 1, num_heads, head_dim))
+        future_v_b = jax.random.normal(keys[5], (batch, seq_len - 1, num_heads, head_dim))
+
+        key_a = jnp.concatenate([shared_kv0, future_k_a], axis=1)
+        key_b = jnp.concatenate([shared_kv0, future_k_b], axis=1)
+        value_a = jnp.concatenate([shared_kv0, future_v_a], axis=1)
+        value_b = jnp.concatenate([shared_kv0, future_v_b], axis=1)
 
         mask = make_causal_mask(seq_len)
         out_a = scaled_dot_product_attention(query, key_a, value_a, mask=mask)
