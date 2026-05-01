@@ -79,10 +79,17 @@ select = [
     "D",    # pydocstyle (docstrings)
 ]
 ignore = [
-    "D100", # missing docstring in public module (handled by __init__)
-    "D107", # missing docstring in __init__
+    "D100",   # missing docstring in public module (handled by __init__)
+    "D102",   # missing docstring in public method (test methods)
+    "D105",   # missing docstring in magic method
+    "D107",   # missing docstring in __init__
     "ANN101", # self type hints not required
     "ANN102", # cls type hints not required
+    "ANN001", # type annotation for function argument (benchmark/test helpers)
+    "ANN002", # type annotation for *args
+    "ANN201", # return type annotation for public function (test fixtures)
+    "ANN401", # dynamically typed Any (JAX accepts Any for jittable functions)
+    "E501",   # line too long (some benchmark output lines exceed limit)
 ]
 
 [tool.ruff.lint.pydocstyle]
@@ -98,7 +105,7 @@ known-third-party = ["jax", "jaxlib", "numpy", "flax"]
 python_version = "3.10"
 strict = false
 ignore_missing_imports = true
-warn_return_any = true
+warn_return_any = false
 warn_unused_configs = true
 exclude = ["tests/", "benchmarks/", "examples/"]
 

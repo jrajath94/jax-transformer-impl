@@ -10,11 +10,10 @@ Provides:
 """
 
 import logging
-from typing import Any, Dict
+from typing import Any
 
 import jax
 import jax.numpy as jnp
-import numpy as np
 
 logger = logging.getLogger(__name__)
 
@@ -22,7 +21,7 @@ logger = logging.getLogger(__name__)
 DEFAULT_DTYPE: jnp.dtype = jnp.float32
 
 # Bytes per element for common dtypes — used in memory estimation.
-DTYPE_BYTES: Dict[Any, int] = {
+DTYPE_BYTES: dict[Any, int] = {
     jnp.float32: 4,
     jnp.bfloat16: 2,
     jnp.float16: 2,
@@ -159,7 +158,7 @@ def xla_compilation_profile(fn: Any, *args: Any) -> None:
     """
     try:
         jaxpr = jax.make_jaxpr(fn)(*args)
-        ops: Dict[str, int] = {}
+        ops: dict[str, int] = {}
         for eqn in jaxpr.jaxpr.eqns:
             prim_name = eqn.primitive.name
             ops[prim_name] = ops.get(prim_name, 0) + 1

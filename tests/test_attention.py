@@ -3,9 +3,9 @@
 Test naming convention: test_<function>_<scenario>_<expected_outcome>
 """
 
-import pytest
 import jax
 import jax.numpy as jnp
+import pytest
 
 from jax_transformer.attention import (
     grouped_query_attention,
@@ -14,7 +14,6 @@ from jax_transformer.attention import (
     scaled_dot_product_attention,
 )
 from jax_transformer.utils import make_causal_mask
-
 
 # ---------------------------------------------------------------------------
 # scaled_dot_product_attention
@@ -214,7 +213,7 @@ class TestGroupedQueryAttention:
         assert jnp.all(jnp.isfinite(grads)), "GQA produced non-finite gradients"
 
     def test_vmap_over_batch(self, rng):
-        """vmap should correctly vectorize GQA over an extra batch dimension."""
+        """Vmap should correctly vectorize GQA over an extra batch dimension."""
         # Build a single-item batch and a batched version; results must agree.
         seq_len, num_heads, num_kv_heads, head_dim = 8, 4, 2, 16
         keys = jax.random.split(rng, 3)

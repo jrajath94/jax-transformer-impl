@@ -7,7 +7,6 @@ Shapes: [batch, seq_len, num_heads, head_dim].
 
 import logging
 import math
-from typing import Optional
 
 import jax
 import jax.numpy as jnp
@@ -22,9 +21,9 @@ def scaled_dot_product_attention(
     query: jnp.ndarray,
     key: jnp.ndarray,
     value: jnp.ndarray,
-    mask: Optional[jnp.ndarray] = None,
+    mask: jnp.ndarray | None = None,
     dropout_rate: float = 0.0,
-    dropout_rng: Optional[jax.Array] = None,
+    dropout_rng: jax.Array | None = None,
 ) -> jnp.ndarray:
     """Scaled dot-product attention.
 
@@ -72,9 +71,9 @@ def multi_head_attention(
     query: jnp.ndarray,
     key: jnp.ndarray,
     value: jnp.ndarray,
-    mask: Optional[jnp.ndarray] = None,
+    mask: jnp.ndarray | None = None,
     dropout_rate: float = 0.0,
-    dropout_rng: Optional[jax.Array] = None,
+    dropout_rng: jax.Array | None = None,
 ) -> jnp.ndarray:
     """Standard multi-head attention (MHA).
 
@@ -100,7 +99,7 @@ def multi_query_attention(
     query: jnp.ndarray,
     key: jnp.ndarray,
     value: jnp.ndarray,
-    mask: Optional[jnp.ndarray] = None,
+    mask: jnp.ndarray | None = None,
 ) -> jnp.ndarray:
     """Multi-query attention (MQA) — Shazeer (2019).
 
@@ -123,7 +122,7 @@ def grouped_query_attention(
     query: jnp.ndarray,
     key: jnp.ndarray,
     value: jnp.ndarray,
-    mask: Optional[jnp.ndarray] = None,
+    mask: jnp.ndarray | None = None,
 ) -> jnp.ndarray:
     """Grouped query attention (GQA) — Ainslie et al. (2023).
 

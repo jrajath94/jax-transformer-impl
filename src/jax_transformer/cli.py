@@ -14,7 +14,7 @@ import jax
 import jax.numpy as jnp
 
 from jax_transformer.attention import grouped_query_attention, multi_head_attention
-from jax_transformer.models import GQAConfig, TransformerBlock, init_transformer_block
+from jax_transformer.models import GQAConfig, init_transformer_block
 from jax_transformer.utils import count_parameters, kv_cache_memory_bytes, xla_compilation_profile
 
 logging.basicConfig(

@@ -19,7 +19,6 @@ use functools.partial or wrap in a lambda. Passing config as a traced
 
 import logging
 from dataclasses import dataclass
-from typing import Optional, Tuple
 
 import jax
 import jax.numpy as jnp
@@ -56,7 +55,7 @@ class GQAConfig:
     num_heads: int = 8
     num_kv_heads: int = 2
     head_dim: int = 64
-    ffn_dim: Optional[int] = None
+    ffn_dim: int | None = None
     dropout_rate: float = 0.0
     max_seq_len: int = 2048
 
@@ -217,7 +216,7 @@ def _project_qkv(
     x: jnp.ndarray,
     params: dict,
     config: GQAConfig,
-) -> Tuple[jnp.ndarray, jnp.ndarray, jnp.ndarray]:
+) -> tuple[jnp.ndarray, jnp.ndarray, jnp.ndarray]:
     """Project input to query, key, value tensors.
 
     Args:
@@ -240,7 +239,7 @@ def attention_forward(
     x: jnp.ndarray,
     params: dict,
     config: GQAConfig,
-    mask: Optional[jnp.ndarray] = None,
+    mask: jnp.ndarray | None = None,
 ) -> jnp.ndarray:
     """GQA attention sublayer with input/output projections.
 
@@ -268,7 +267,7 @@ def transformer_block_forward(
     x: jnp.ndarray,
     params: dict,
     config: GQAConfig,
-    mask: Optional[jnp.ndarray] = None,
+    mask: jnp.ndarray | None = None,
 ) -> jnp.ndarray:
     """Single pre-norm TransformerBlock forward pass.
 
@@ -338,7 +337,7 @@ class TransformerBlock:
     def __call__(
         self,
         x: jnp.ndarray,
-        mask: Optional[jnp.ndarray] = None,
+        mask: jnp.ndarray | None = None,
     ) -> jnp.ndarray:
         """Forward pass.
 

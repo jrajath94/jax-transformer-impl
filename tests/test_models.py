@@ -1,8 +1,8 @@
 """Tests for TransformerBlock and supporting model components."""
 
-import pytest
 import jax
 import jax.numpy as jnp
+import pytest
 
 from jax_transformer.models import (
     GQAConfig,
@@ -13,7 +13,6 @@ from jax_transformer.models import (
     transformer_block_forward,
 )
 from jax_transformer.utils import count_parameters, make_causal_mask
-
 
 # ---------------------------------------------------------------------------
 # GQAConfig

@@ -1,11 +1,9 @@
 """Shared pytest fixtures for jax-transformer-impl test suite."""
 
-import pytest
 import jax
-import jax.numpy as jnp
+import pytest
 
 from jax_transformer.models import GQAConfig
-
 
 # ---------------------------------------------------------------------------
 # PRNG fixtures
