@@ -57,18 +57,6 @@ pip install "jax[cpu]" && pip install -e ".[dev]"
 python examples/quickstart.py
 ```
 
-Expected output:
-
-```
-INFO  JAX version: 0.4.23  |  Backend: cpu
-INFO  --- GQA Forward Pass ---
-INFO    Input  Q: (2, 32, 8, 64)  K: (2, 32, 2, 64)  V: (2, 32, 2, 64)
-INFO    Output  : (2, 32, 8, 64)  (same as Q shape — correct)
-INFO  --- GQA == MHA When G == H ---
-INFO    Max diff GQA(G=H) vs MHA: 0.00e+00  (should be < 1e-5)
-INFO    PASSED: GQA is a strict generalization of MHA
-```
-
 ## Key Design Decisions
 
 | Decision | Rationale | Alternative Considered | Tradeoff |
@@ -81,16 +69,16 @@ INFO    PASSED: GQA is a strict generalization of MHA
 
 ## Benchmarks
 
-Measured on CPU backend (JAX 0.9.0, Python 3.11), batch=4, seq=512, head_dim=64, 32 transformer layers for KV cache estimate.
+KV cache memory estimates (batch=4, seq=512, head_dim=64, 32 transformer layers):
 
-| Config | Latency (ms) | KV Cache (MB) | KV Reduction vs MHA |
-|--------|-------------|---------------|---------------------|
-| MHA (H=8, G=8) | 20.84 | 268.44 | 1.0x |
-| GQA (H=8, G=4) | 19.96 | 134.22 | 2.0x |
-| GQA (H=8, G=2) | 18.26 | 67.11 | 4.0x |
-| MQA (H=8, G=1) | 20.90 | 33.55 | 8.0x |
+| Config | KV Cache (MB) | KV Reduction vs MHA |
+|--------|---------------|---------------------|
+| MHA (H=8, G=8) | 268.44 | 1.0x |
+| GQA (H=8, G=4) | 134.22 | 2.0x |
+| GQA (H=8, G=2) | 67.11 | 4.0x |
+| MQA (H=8, G=1) | 33.55 | 8.0x |
 
-Note: the latency advantage of GQA is more pronounced on GPU/TPU where KV loading from HBM is the bottleneck. On CPU, compute dominates over bandwidth.
+To measure latency on your hardware, run `make bench`.
 
 **Production-scale KV cache** (Llama-2-70B config: bs=32, seq=4096, 80 layers):
 
@@ -105,24 +93,16 @@ This is why Llama-2-70B uses GQA with G=8 — it makes 4K-context inference feas
 ## Testing
 
 ```bash
-make test       # Unit + integration tests, 87% coverage
+make test       # Unit + integration tests
 make bench      # GQA vs MHA memory + latency benchmarks
 make lint       # ruff + mypy
 ```
 
-Key test cases:
-
-```
-test_equivalence_to_mha_when_groups_equal_heads  PASSED
-test_parametrize_head_configurations[8-8]        PASSED
-test_parametrize_head_configurations[8-4]        PASSED
-test_parametrize_head_configurations[8-2]        PASSED
-test_parametrize_head_configurations[8-1]        PASSED
-test_jit_compilation_produces_same_result        PASSED
-test_gradient_flow_produces_finite_gradients     PASSED
-```
-
-Coverage: 87% across `src/jax_transformer/`
+Tests cover:
+- Equivalence: GQA with equal heads/KV heads matches MHA
+- Correctness: Shape, output validity, gradient flow for all attention variants
+- Compilation: JIT compilation and vmap compatibility
+- Integration: Full transformer block forward/backward pass
 
 ## Multi-Device Sharding
 
@@ -151,7 +131,7 @@ src/jax_transformer/
 ├── models.py       # TransformerBlock + GQAConfig + parameter init
 ├── utils.py        # Sharding helpers, KV cache estimation, XLA profiling
 └── cli.py          # CLI: benchmark and profile subcommands
-tests/              # 87% coverage; shape, equivalence, gradient flow tests
+tests/              # Shape, equivalence, gradient flow tests
 benchmarks/         # GQA vs MHA latency + production-scale memory comparison
 docs/
 ├── architecture.md    # Data flow, component responsibilities
