@@ -2,7 +2,7 @@
 
 ## Overview
 
-This project implements Grouped Query Attention (GQA) and its variants (MHA, MQA) as a production-grade JAX library. The architecture is deliberately functional — no classes hold mutable state, every function is JIT-compilable, and parameter trees are plain Python dicts compatible with optax optimizers and pmap multi-device training.
+This project implements Grouped Query Attention (GQA) and its variants (MHA, MQA) as a production-grade JAX library. The architecture is deliberately functional - no classes hold mutable state, every function is JIT-compilable, and parameter trees are plain Python dicts compatible with optax optimizers and pmap multi-device training.
 
 ## Attention Variants
 
@@ -117,23 +117,23 @@ Output [8, 512, 512]
 
 ## KV Cache Memory Analysis
 
-The key insight from the GQA paper: at inference time, the KV cache — not model weights — is often the binding memory constraint.
+The key insight from the GQA paper: at inference time, the KV cache - not model weights - is often the binding memory constraint.
 
 | Config | KV heads | KV cache (bs=8, seq=2048, 32 layers) |
 |--------|----------|--------------------------------------|
 | MHA H=32 | 32 | ~268 MB (fp32) |
-| GQA G=8  | 8  | ~67 MB — 4x reduction |
-| GQA G=4  | 4  | ~33 MB — 8x reduction |
-| MQA G=1  | 1  | ~8.4 MB — 32x reduction |
+| GQA G=8  | 8  | ~67 MB - 4x reduction |
+| GQA G=4  | 4  | ~33 MB - 8x reduction |
+| MQA G=1  | 1  | ~8.4 MB - 32x reduction |
 
 The 4x reduction (H=32, G=8) is the Llama-2-70B configuration. Quality is nearly indistinguishable from MHA on most benchmarks; see Ainslie et al. (2023) Table 3.
 
 ## XLA Compilation Notes
 
 Key ops visible in `jax.make_jaxpr`:
-- `dot_general`: fused einsum operations — the primary computation
+- `dot_general`: fused einsum operations - the primary computation
 - `reduce_max`, `exp`, `reduce_sum`, `div`: softmax decomposed by XLA
 - `broadcast_in_dim`: KV head expansion (repeat_interleave)
 - `slice`, `reshape`: head reshaping ops
 
-XLA typically fuses the softmax reduction and the QK^T matmul into a single kernel. The `broadcast_in_dim` for KV expansion is lightweight — no data is actually copied until the attention computation materializes it.
+XLA typically fuses the softmax reduction and the QK^T matmul into a single kernel. The `broadcast_in_dim` for KV expansion is lightweight - no data is actually copied until the attention computation materializes it.
